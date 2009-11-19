@@ -4,7 +4,7 @@ Plugin Name: uberVU Comments
 Plugin URI: http://www.ubervu.com
 Description: This plugin displays reactions to your posts from all over the web using the <a href='http://www.contextvoice.com'>ContextVoice </a> API
 Author: uberVU Team
-Version: 1.2
+Version: 0.1
 Author URI: http://www.ubervu.com
 */
 
@@ -57,7 +57,7 @@ function loopReactions($post, $rsp_obj, $since_url, $parent = 0) {
 			    
 			  $postURL = get_permalink($post->ID);
 			  if (substr($postURL, 0, 7) == 'http://') $postURL = substr($postURL, 7);
-			  $content = (string)$r->content.'<p>via <a href="http://www.ubervu.com/conversations/'.urlencode($postURL).'">uberVU</a></p>';
+			  $content = (string)$r->content.'<p class="ubervu_reaction_link">via <a href="http://www.ubervu.com/conversations/'.urlencode($postURL).'">uberVU</a></p>';
 			  
 				addUbervuReactions($post->ID, (string)$author->name, $author_url, $author_image, (string)$r->attributes()->published, $content, $parent);
 				
@@ -101,7 +101,7 @@ function getUbervuReactions($postArray) {
 	
 	if (get_option('ubervu_threaded') == 'no') unset($params['threaded']);
 	
-	$exclude = array();
+	$exclude = array('wordpress');
 	foreach ($services as $service) {
 	  if (get_option('ubervu_include_'.$service) == 'no') $exclude[] = $service;
 	}
@@ -240,6 +240,18 @@ if (get_option('ubervu_tag') == 'yes') {
     $wp_query->comments = $wp_query->reactions;
     wp_list_comments($args);
   }
+  
+  function reactions_number($zero = 'No Reactions', $one = '1 Reaction', $more = '% Reactions', $number = '' ) {
+    global $wp_query;
+    $number = count($wp_query->reactions);
+    if ($number == 0) {
+      $blah = $zero;
+    } elseif ($number == 1) {
+      $blah = $one;
+    } elseif ($number  > 1) {
+      $blah = str_replace('%', $number, $more);
+    }
+  }
 
   function filterComments($comments_array) {
     global $wp_query;
@@ -258,7 +270,7 @@ if (get_option('ubervu_tag') == 'yes') {
 }
 
 $commentCount = 0;
-$services = array('twitter', 'friendfeed', 'digg', 'wordpress', 'blogger', 'typepad', 'disqus', 'flickr', 'picasa', 'youtube', 'vimeo', 'delicious', 'reddit', 'hackernews', 'mixx', 'stumbleupon', 'nytimes', 'slashdot', 'yahoobuzz');
+$services = array('twitter', 'friendfeed', 'digg', 'blogger', 'typepad', 'disqus', 'flickr', 'picasa', 'youtube', 'vimeo', 'delicious', 'reddit', 'hackernews', 'mixx', 'stumbleupon', 'nytimes', 'slashdot', 'yahoobuzz');
 
 if(!isset($_SESSION))
   session_start();
