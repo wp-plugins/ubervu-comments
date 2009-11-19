@@ -4,7 +4,7 @@ Plugin Name: uberVU Comments
 Plugin URI: http://www.ubervu.com
 Description: This plugin displays reactions to your posts from all over the web using the <a href='http://www.contextvoice.com'>ContextVoice </a> API
 Author: uberVU Team
-Version: 0.1
+Version: 1.2
 Author URI: http://www.ubervu.com
 */
 
@@ -97,7 +97,7 @@ function getUbervuReactions($postArray) {
   else
     add_option('ubervu_since', serialize(array()), null, 'no');
   
-	$params = array('apikey'=>'udheetyregnrz2gbmdjhv8zv', 'perpage' => '100', 'threaded' => 'true', 'url' => urlencode($postUrl));
+	$params = array('perpage' => '100', 'threaded' => 'true', 'url' => urlencode($postUrl));
 	
 	if (get_option('ubervu_threaded') == 'no') unset($params['threaded']);
 	
@@ -116,7 +116,7 @@ function getUbervuReactions($postArray) {
 	$get = array();
 	foreach ($params as $k => $v) $get[] = $k.'='.$v;
 	$get = implode('&', $get);
-	$url = "http://api.contextvoice.com/1.2/reactions/?".$get;
+	$url = "http://externalapi.contextvoice.com/1.2/reactions/?".$get;
 	try {
 		$rsp = file_get_contents_curl($url);
 		$rsp_obj = new SimpleXMLElement($rsp);
@@ -144,10 +144,10 @@ function getUbervuReactions($postArray) {
 }
 
 function ubervuPluginMenu() {
-    add_options_page('uberVU Comments', 'uberVU Comments', 'administrator', 'ubervuoptions', 'options_page');
+    add_options_page('uberVU Comments', 'uberVU Comments', 'administrator', 'ubervuoptions', 'uc_options_page');
 }
 
-function options_page() {
+function uc_options_page() {
   global $services;
 ?>
 <div class="wrap">
@@ -159,8 +159,16 @@ function options_page() {
 <table class="form-table">
 
 <tr valign="top">
+<th scope="row">Use template tag</th>
+<td valign="bottom">
+  <input type="radio" name="ubervu_tag" value="yes" <?=(get_option("ubervu_tag")=='yes')?'checked="checked"':''?>>Yes</option>
+  <input type="radio" name="ubervu_tag" value="no" <?=(get_option("ubervu_tag")=='no' || !get_option("ubervu_tag"))?'checked="checked"':''?>>No</option>
+</td>
+</tr>
+
+<tr valign="top">
 <th scope="row">Threaded conversation</th>
-<td>
+<td valign="bottom">
   <input type="radio" name="ubervu_threaded" value="yes" <?=(get_option("ubervu_threaded")=='yes' || !get_option("ubervu_threaded"))?'checked="checked"':''?>>Yes</option>
   <input type="radio" name="ubervu_threaded" value="no" <?=(get_option("ubervu_threaded")=='no')?'checked="checked"':''?>>No</option>
 </td>
@@ -198,7 +206,7 @@ foreach ($services as $service) { ?>
 </table>
 
 <input type="hidden" name="action" value="update" />
-<input type="hidden" name="page_options" value="ubervu_threaded,<?=implode(',', $options)?>,ubervu_show_retweets" />
+<input type="hidden" name="page_options" value="ubervu_tag,ubervu_threaded,<?=implode(',', $options)?>,ubervu_show_retweets" />
 
 <p class="submit">
 <input type="submit" class="button-primary" value="<?php _e('Save Changes') ?>" />
@@ -223,6 +231,30 @@ function replaceAvatars($img, $comment) {
   if ($avatar && substr($avatar, 0, 7) == 'http://')
     return preg_replace("/src='[^']+'/", "src='".$comment->comment_author_IP."'", $img);
   return $img;
+}
+
+if (get_option('ubervu_tag') == 'yes') {
+  
+  function ubervu_list_reactions($args = array()) {
+    global $wp_query;
+    $wp_query->comments = $wp_query->reactions;
+    wp_list_comments($args);
+  }
+
+  function filterComments($comments_array) {
+    global $wp_query;
+    $wp_query->reactions = array();
+    foreach ($comments_array as $k=>$comment) {
+      if ($comment->comment_agent == 'uberVU') {
+        $wp_query->reactions[] = $comments_array[$k];
+        unset($comments_array[$k]);
+      }
+    }
+    return $comments_array;
+  }
+  
+  add_filter('comments_array', 'filterComments', 1);
+  
 }
 
 $commentCount = 0;
